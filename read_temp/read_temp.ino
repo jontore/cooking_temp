@@ -1,11 +1,5 @@
-/*
-  Single_Temp.pde - Example using the MAX6675 Library.
-  Created by Ryan McLaughlin <ryanjmclaughlin@gmail.com>
 
-  This work is licensed under a Creative Commons Attribution-ShareAlike 3.0 Unported License.
-  http://creativecommons.org/licenses/by-sa/3.0/
-*/
-
+#include <avr/pgmspace.h>
 #include <SoftwareSerial.h>
 #include <MAX6675.h>
 #include <Wire.h>
@@ -38,6 +32,10 @@ LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin,
 
 #define SSID ""
 #define PASSWORD ""
+
+#define TEMPERATURE_STR 0
+const char preTmp[] PROGMEM = "d%5Btemperature%5D=";
+const char* const string_table[] PROGMEM = {preTmp};
 
 ESP esp(&Serial, &debugPort, 3);
 
@@ -105,6 +103,21 @@ void hasReachedTargetTemperature(float temperature) {
   }
 }
 
+void copyAndCat(char* input, int str_position, float measurement) {
+  char tmp[20];
+  char tempStr[50];
+  dtostrf(measurement, 4, 3, tmp);
+  strcpy_P(tempStr, (char*)pgm_read_word(&(string_table[str_position])));
+  strcat(tempStr, tmp);
+  strcat(input, tempStr);
+}
+
+void createTemperatureStr(char* input, float temperature) {
+  strcpy(input, "");
+  copyAndCat(input, TEMPERATURE_STR, temperature);
+}
+
+char tmp[150];
 void loop() {
   char response[266];
   esp.process();
@@ -115,11 +128,15 @@ void loop() {
       debugPort.println("ARDUINO: GET successful");
       debugPort.println(response);
     }
-      
+    
     delay(1000);
 
     temperature = temp.read_temp();
     hasReachedTargetTemperature(temperature);
+    createTemperatureStr(tmp, temperature);
+
+    debugPort.println(tmp);
+    
     lcd.clear();
     lcd.home();
     lcd.print(temperature);
