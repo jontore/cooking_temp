@@ -44,7 +44,7 @@ LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin,
 #define TEMPERATURE_STR 2
 const char preTmp[] PROGMEM = "mashing%5Btemperature%5D=";
 const char domain[] PROGMEM = "example.com";
-const char path[] PROGMEM = "measurements";
+const char path[] PROGMEM = "temp";
 const char* const stringTable[] PROGMEM = {domain, path, preTmp};
 
 ESP esp(&Serial, &debugPort, 3);
@@ -71,8 +71,7 @@ void wifiCb(void* response)
   }
 }
 
-// Setup Serial output and LED Pin  
-// MAX6675 Library already sets pin modes for MAX6675 chip!
+
 void setup() {
   lcd.begin(10, 2);
   lcd.home();
@@ -94,7 +93,7 @@ void setup() {
   delay(1000);
 
   debugPort.println("ARDUINO: setup rest client");
-  if(!rest.begin("homebrewer.herokuapp.com")) {
+  if(!rest.begin("example.com")) {
     debugPort.println("ARDUINO: failed to setup rest client");
     while(1);
   }
@@ -160,9 +159,8 @@ void loop() {
     createTemperatureStr(tmp, temperature);
     char* path = getProgMemStr(PATH_STR);
     rest.setContentType("application/x-www-form-urlencoded");
-    rest.post("/mash_measurements", tmp);
+    rest.post("/path", tmp);
 
-    lcd.println(tmp);
     if(rest.getResponse(response, 266) == HTTP_STATUS_OK){
       debugPort.println("ARDUINO: GET successful");
       debugPort.println(response);
