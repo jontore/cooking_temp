@@ -147,6 +147,7 @@ void printTemperature(float temperature, float targetTemperature) {
 };
 
 char tmp[150];
+int updateCount = 100;
 void loop() {
   char response[266];
   esp.process();
@@ -154,18 +155,21 @@ void loop() {
   temperature = temp.read_temp();
   targetTemperature = readTargetTemp();
   hasReachedTargetTemperature(temperature, targetTemperature);
+
+  updateCount--;
   
-  if(wifiConnected) {
+  if(wifiConnected && updateCount == 0) {
     createTemperatureStr(tmp, temperature);
     char* path = getProgMemStr(PATH_STR);
     rest.setContentType("application/x-www-form-urlencoded");
-    rest.post("/path", tmp);
+    rest.post("/mash_measurements", tmp);
 
     if(rest.getResponse(response, 266) == HTTP_STATUS_OK){
       debugPort.println("ARDUINO: GET successful");
       debugPort.println(response);
     }
 
+   updateCount = 100;
    delay(200);
   }
 
