@@ -33,6 +33,8 @@ MAX6675 temp(CS,SO,SCK1,units);
 #define SPEAKER_PORT 8 
 #define PICO_INPUT A0
 
+#define BUTTON_PIN 2
+
 SoftwareSerial debugPort(9, 10); // RX, TX
 LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin, BACKLIGHT_PIN, POSITIVE);
 
@@ -52,6 +54,7 @@ ESP esp(&Serial, &debugPort, 3);
 REST rest(&esp);
 
 boolean wifiConnected = false;
+boolean loggingDisabled = false;
 
 void wifiCb(void* response)
 {
@@ -83,6 +86,9 @@ void setup() {
   Serial.begin(19200);
   debugPort.begin(19200);
   debugPort.println("start");
+
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), checkToggleLogging, RISING);
   
   esp.enable();
   delay(500);
@@ -105,6 +111,13 @@ void setup() {
   esp.wifiCb.attach(&wifiCb);
   esp.wifiConnect(SSID, PASSWORD);
   debugPort.println("ARDUINO: system started");
+}
+
+void checkToggleLogging() {
+  delay(200);
+  if (digitalRead(BUTTON_PIN)){
+    loggingDisabled = !loggingDisabled;
+  }
 }
 
 char* getProgMemStr(int strPosition) {
@@ -141,9 +154,22 @@ void printTemperature(float temperature, float targetTemperature) {
   lcd.clear();
   lcd.home();
   lcd.print(temperature);
-  lcd.print("C -> ");
+  lcd.print("C->");
   lcd.print(targetTemperature);
-  lcd.print("C");
+  lcd.println("C");
+
+  lcd.setCursor(0, 1);
+  if(loggingDisabled) {
+    lcd.print("w: off");
+  } else {
+    lcd.print("w: on");
+  }
+
+  if(wifiConnected) {
+    lcd.print("O");
+  } else {
+    lcd.print("-");
+  }
 };
 
 char tmp[150];
@@ -158,7 +184,7 @@ void loop() {
 
   updateCount--;
   
-  if(wifiConnected && updateCount == 0) {
+  if(wifiConnected && !loggingDisabled && updateCount == 0) {
     createTemperatureStr(tmp, temperature);
     char* path = getProgMemStr(PATH_STR);
     rest.setContentType("application/x-www-form-urlencoded");
