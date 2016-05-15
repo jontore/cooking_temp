@@ -38,16 +38,15 @@ MAX6675 temp(CS,SO,SCK1,units);
 SoftwareSerial debugPort(9, 10); // RX, TX
 LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin, BACKLIGHT_PIN, POSITIVE);
 
-#define SSID ""
-#define PASSWORD ""
+#define SSID "example.com"
+#define PASSWORD "PWD"
 
-#define DOMAIN_STR 0
-#define PATH_STR 1
-#define TEMPERATURE_STR 2
+#define DOMAIN "example.com"
+#define PATH "/mash_measurements"
+
+#define TEMPERATURE_STR 0
 const char preTmp[] PROGMEM = "mashing%5Btemperature%5D=";
-const char domain[] PROGMEM = "example.com";
-const char path[] PROGMEM = "temp";
-const char* const stringTable[] PROGMEM = {domain, path, preTmp};
+const char* const stringTable[] PROGMEM = {preTmp};
 
 ESP esp(&Serial, &debugPort, 3);
 
@@ -96,10 +95,10 @@ void setup() {
   delay(500);
   while(!esp.ready());
   
-  delay(1000);
-
+  delay(1000); 
+  
   debugPort.println("ARDUINO: setup rest client");
-  if(!rest.begin("example.com")) {
+  if(!rest.begin(DOMAIN)) {
     debugPort.println("ARDUINO: failed to setup rest client");
     while(1);
   }
@@ -186,9 +185,8 @@ void loop() {
   
   if(wifiConnected && !loggingDisabled && updateCount == 0) {
     createTemperatureStr(tmp, temperature);
-    char* path = getProgMemStr(PATH_STR);
     rest.setContentType("application/x-www-form-urlencoded");
-    rest.post("/mash_measurements", tmp);
+    rest.post(PATH, tmp);
 
     if(rest.getResponse(response, 266) == HTTP_STATUS_OK){
       debugPort.println("ARDUINO: GET successful");
